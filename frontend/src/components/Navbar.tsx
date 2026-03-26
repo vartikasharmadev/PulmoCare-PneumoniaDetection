@@ -44,14 +44,6 @@ export function Navbar() {
         </div>
 
         <div className="flex items-center gap-2 sm:gap-3">
-          <Button
-            variant="secondary"
-            size="sm"
-            type="button"
-            onClick={() => window.open('https://github.com', '_blank')}
-          >
-            GitHub
-          </Button>
           <Button variant="primary" size="sm" type="button" onClick={scrollToAnalysis}>
             Open scanner
           </Button>

@@ -1,39 +1,35 @@
+"""Evaluate global_federated_model.h5 on data/test (run from project root)."""
+
+from pathlib import Path
+
+from sklearn.metrics import classification_report, confusion_matrix, roc_auc_score
 from tensorflow.keras.models import load_model
 from tensorflow.keras.preprocessing.image import ImageDataGenerator
-from sklearn.metrics import classification_report, confusion_matrix, roc_auc_score
-import numpy as np
+ROOT = Path(__file__).resolve().parent
+model = load_model(ROOT / "global_federated_model.h5")
 
-# Load saved model
-model = load_model("global_federated_model.h5")
-
-# Load test dataset
-datagen = ImageDataGenerator(rescale=1./255)
+datagen = ImageDataGenerator(rescale=1.0 / 255)
 test_gen = datagen.flow_from_directory(
-    "data/test",
+    str(ROOT / "data" / "test"),
     target_size=(150, 150),
     batch_size=32,
-    class_mode='binary',
-    shuffle=False
+    class_mode="binary",
+    shuffle=False,
 )
 
-# Evaluate model
 loss, acc = model.evaluate(test_gen)
-print(f"\nTest Accuracy: {acc*100:.2f}%")
-print(f"Test Loss: {loss:.4f}")
+print(f"\nTest accuracy: {acc * 100:.2f}%")
+print(f"Test loss: {loss:.4f}")
 
-# Predictions for metrics
 predictions = (model.predict(test_gen) > 0.5).astype("int32")
 y_true = test_gen.classes
 y_pred = predictions.flatten()
 
-# Classification report
-print("\n📊 Classification Report:")
-print(classification_report(y_true, y_pred, target_names=['NORMAL', 'PNEUMONIA']))
+print("\nClassification report:")
+print(classification_report(y_true, y_pred, target_names=["NORMAL", "PNEUMONIA"]))
 
-# Confusion matrix
-print("\n🧾 Confusion Matrix:")
+print("\nConfusion matrix:")
 print(confusion_matrix(y_true, y_pred))
 
-# ROC-AUC
 auc = roc_auc_score(y_true, y_pred)
-print(f"\n🚀 ROC-AUC Score: {auc:.4f}")
+print(f"\nROC-AUC: {auc:.4f}")

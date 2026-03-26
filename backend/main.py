@@ -2,8 +2,8 @@ import io
 import os
 import sys
 import warnings
+from contextlib import asynccontextmanager
 
-# macOS Command Line Tools Python often ships LibreSSL; urllib3 warns — safe to ignore here
 warnings.filterwarnings(
     "ignore",
     message=r".*urllib3 v2 only supports OpenSSL.*",
@@ -11,8 +11,8 @@ warnings.filterwarnings(
 )
 
 print(
-    "Loading TensorFlow + SciPy (first time can take 1–3 minutes). Do not press Ctrl+C.\n"
-    "Tip: use `fl_env` (Python 3.9), not `.venv`.\n",
+    "Loading TensorFlow + SciPy (first time can take 1–3 minutes). Do not interrupt.\n"
+    "Use fl_env (Python 3.9), not .venv.\n",
     file=sys.stderr,
     flush=True,
 )
@@ -22,14 +22,8 @@ try:
     from tensorflow.keras.preprocessing import image
 except ImportError:
     print(
-        f"TensorFlow is missing or not supported for Python {sys.version_info.major}.{sys.version_info.minor}.\n"
-        "\n"
-        "Use the project ML venv:\n"
-        "  cd backend\n"
-        "  source ../fl_env/bin/activate\n"
-        "  python main.py\n"
-        "\n"
-        "(.venv is Python 3.14 — TensorFlow does not support it yet.)\n",
+        f"TensorFlow missing or unsupported on Python {sys.version_info.major}.{sys.version_info.minor}.\n"
+        "Use: cd backend && source ../fl_env/bin/activate && python main.py\n",
         file=sys.stderr,
     )
     raise SystemExit(1) from None
@@ -39,18 +33,6 @@ import uvicorn
 from fastapi import FastAPI, File, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from PIL import Image
-
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
-app = FastAPI(title="Pneumonia Detection API")
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
 
 model = None
 
@@ -64,12 +46,24 @@ def load_trained_model() -> None:
         model = load_model(model_path)
         print("Model ready.", flush=True)
     else:
-        print(f"Warning: no model file at {model_path}", flush=True)
+        print(f"No model file at {model_path}", flush=True)
 
 
-@app.on_event("startup")
-async def startup_event() -> None:
+@asynccontextmanager
+async def lifespan(_app: FastAPI):
     load_trained_model()
+    yield
+
+
+app = FastAPI(title="Pneumonia Detection API", lifespan=lifespan)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
 @app.get("/")
@@ -104,14 +98,13 @@ async def predict(file: UploadFile = File(...)) -> dict:
             "raw_value": float(prediction_val),
         }
     except Exception as e:
-        import traceback
-
-        traceback.print_exc()
-        raise HTTPException(status_code=500, detail=f"Prediction failed: {str(e)}") from e
+        raise HTTPException(
+            status_code=500,
+            detail=f"Prediction failed: {str(e)}",
+        ) from e
 
 
 if __name__ == "__main__":
-    # reload=True loads TensorFlow twice (parent + worker) and feels “stuck” — opt in only if needed
     use_reload = os.environ.get("UVICORN_RELOAD", "").strip() == "1"
     uvicorn.run(
         "main:app",

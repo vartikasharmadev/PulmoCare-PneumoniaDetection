@@ -8,8 +8,19 @@ async function start() {
 
   const app = createApp();
 
-  app.listen(config.port, () => {
+  const server = app.listen(config.port, () => {
     console.log(`[Server] Listening on port ${config.port}`);
+  });
+
+  server.on('error', (err: NodeJS.ErrnoException) => {
+    if (err.code === 'EADDRINUSE') {
+      console.error(
+        `[Server] Port ${config.port} is already in use. Stop the other process or run: npm run ports:free`,
+      );
+    } else {
+      console.error('[Server] Listen error:', err);
+    }
+    process.exit(1);
   });
 }
 

@@ -1,9 +1,10 @@
-# Save the final global model after training completes
-import tensorflow as tf
-from model import create_cnn_model
+"""
+Flower federated averaging server (not the HTTP API).
+Saves global_federated_model.h5 when training finishes.
+"""
 
-# Start Flower server
 import flwr as fl
+from model import create_cnn_model
 
 strategy = fl.server.strategy.FedAvg(
     min_fit_clients=2,
@@ -14,17 +15,16 @@ strategy = fl.server.strategy.FedAvg(
     on_fit_config_fn=None,
 )
 
-history = fl.server.start_server(
+fl.server.start_server(
     server_address="localhost:8080",
     config=fl.server.ServerConfig(num_rounds=100),
     strategy=strategy,
 )
 
-# After training rounds are done:
 print("Training complete. Saving global model...")
 model = create_cnn_model()
 weights = strategy.initial_parameters
 if weights is not None:
     model.set_weights(fl.common.parameters_to_ndarrays(weights))
 model.save("global_federated_model.h5")
-print("Global model saved as global_federated_model.h5")
+print("Saved global_federated_model.h5")
