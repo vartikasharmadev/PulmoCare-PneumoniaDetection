@@ -1,0 +1,28 @@
+# Secrets — never commit
+.env
+.env.local
+.env.*.local
+
+# Dependencies
+node_modules/
+**/node_modules/
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+fl_env/
+
+# Builds
+dist/
+**/dist/
+
+# Large / local datasets (multi‑GB — GitHub will reject)
+data/
+chest-xray-pneumonia/
+chest-xray-pneumonia.zip
+
+# Logs & OS
+*.log
+.DS_Store

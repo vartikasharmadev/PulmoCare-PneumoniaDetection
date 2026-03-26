@@ -1,0 +1,60 @@
+@import url("https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300..700;1,9..40,300..700&display=swap");
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "DM Sans", system-ui, sans-serif;
+
+  /* Hospital green–bluish clinical palette */
+  --color-clinical-50: #ecfdf8;
+  --color-clinical-100: #d0f5ea;
+  --color-clinical-200: #a5e8d8;
+  --color-clinical-300: #6dd4bf;
+  --color-clinical-400: #3db9a3;
+  --color-clinical-500: #1a9d8a;
+  --color-clinical-600: #0f7d72;
+  --color-clinical-700: #0f645c;
+  --color-clinical-800: #10504a;
+  --color-clinical-900: #11423e;
+
+  --color-surgical-50: #f0f9ff;
+  --color-surgical-100: #e0f2fe;
+  --color-surgical-200: #b9e6fe;
+  --color-surgical-300: #7dd3fc;
+  --color-surgical-400: #38bdf8;
+  --color-surgical-500: #0ea5e9;
+  --color-surgical-600: #0284c7;
+  --color-surgical-700: #0369a1;
+}
+
+:root {
+  font-family: var(--font-sans);
+  line-height: 1.5;
+  font-weight: 400;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  color: #0f172a;
+  background-color: var(--color-clinical-50);
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+}
+
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-up {
+  animation: fade-up 0.45s ease-out forwards;
+}
