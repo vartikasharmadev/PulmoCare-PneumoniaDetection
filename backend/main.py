@@ -39,9 +39,7 @@ model = None
 
 def load_trained_model():
     global model
-    repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
-    model_path = os.path.join(repo_root, "global_federated_model.h5")
-
+    model_path = os.path.join(os.path.dirname(__file__), "global_federated_model.h5")
     if not os.path.exists(model_path):
         print(f"❌ Model file not found at {model_path}", flush=True)
         return
