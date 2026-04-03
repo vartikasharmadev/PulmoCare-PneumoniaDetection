@@ -1,59 +1,26 @@
 import io
 import os
-import sys
-import warnings
-
-warnings.filterwarnings(
-    "ignore",
-    message=r".*urllib3 v2 only supports OpenSSL.*",
-    category=Warning,
-)
-
-# Reduce TensorFlow logs
-os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
-
-print("Starting Pneumonia Detection API...\n", file=sys.stderr, flush=True)
-
 import numpy as np
-from fastapi import FastAPI, File, HTTPException, UploadFile
+from fastapi import FastAPI, File, UploadFile, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from PIL import Image
+import tflite_runtime.interpreter as tflite
+
+print("🚀 Starting TFLite Pneumonia Detection API...")
 
 # -------------------------
-# GLOBAL MODEL
+# LOAD MODEL
 # -------------------------
-model = None
+model_path = os.path.join(os.path.dirname(__file__), "model.tflite")
 
+if not os.path.exists(model_path):
+    raise RuntimeError(f"❌ model.tflite not found at {model_path}")
 
-def load_trained_model():
-    global model
+interpreter = tflite.Interpreter(model_path=model_path)
+interpreter.allocate_tensors()
 
-    try:
-        from tensorflow.keras.models import load_model
-    except Exception as e:
-        print("❌ TensorFlow import failed:", e)
-        return
-
-    model_path = os.path.join(os.path.dirname(__file__), "global_federated_model.h5")
-
-    if not os.path.exists(model_path):
-        print(f"❌ Model file not found at {model_path}", flush=True)
-        return
-
-    try:
-        print("🔄 Loading model...", flush=True)
-        model = load_model(model_path)
-        print("✅ Model loaded successfully", flush=True)
-    except Exception as e:
-        print("❌ Model loading failed:", e)
-
-
-def get_model():
-    global model
-    if model is None:
-        load_trained_model()
-    return model
-
+input_details = interpreter.get_input_details()
+output_details = interpreter.get_output_details()
 
 # -------------------------
 # FASTAPI APP
@@ -68,75 +35,57 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-
 # -------------------------
 # ROUTES
 # -------------------------
 @app.get("/")
-def read_root():
-    return {"message": "Pneumonia Detection API is running"}
-
+def root():
+    return {"message": "Pneumonia Detection API running"}
 
 @app.get("/health")
 def health():
     return {"status": "ok"}
 
-
 @app.post("/predict")
 async def predict(file: UploadFile = File(...)):
     try:
-        # Lazy import
-        from tensorflow.keras.preprocessing import image
-
-        model_instance = get_model()
-
-        if model_instance is None:
-            raise Exception("Model not loaded")
-
         contents = await file.read()
 
         img = Image.open(io.BytesIO(contents)).convert("RGB")
         img = img.resize((150, 150))
 
-        img_array = image.img_to_array(img) / 255.0
-        img_array = np.expand_dims(img_array, axis=0)
+        img_array = np.array(img) / 255.0
+        img_array = np.expand_dims(img_array, axis=0).astype("float32")
 
-        prediction_val = model_instance.predict(img_array, verbose=0)[0][0]
+        interpreter.set_tensor(input_details[0]['index'], img_array)
+        interpreter.invoke()
+
+        prediction_val = interpreter.get_tensor(output_details[0]['index'])[0][0]
 
         result = "PNEUMONIA" if prediction_val > 0.5 else "NORMAL"
-        confidence = (
-            float(prediction_val)
-            if result == "PNEUMONIA"
-            else float(1 - prediction_val)
-        )
 
         return {
             "prediction": result,
-            "confidence": confidence,
-            "raw_value": float(prediction_val),
+            "confidence": float(prediction_val),
         }
 
     except Exception as e:
         import traceback
-
         print("\n❌ ERROR DURING PREDICTION:")
         traceback.print_exc()
 
-        raise HTTPException(
-            status_code=500,
-            detail=str(e),
-        )
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 # -------------------------
-# RUN (LOCAL ONLY)
+# RUN (RAILWAY COMPATIBLE)
 # -------------------------
-if __name__ == "__main__":
-    import uvicorn
+import uvicorn
 
-    uvicorn.run(
-        "main:app",
-        host="0.0.0.0",
-        port=8000,
-        reload=True,
-    )
+port = int(os.environ.get("PORT", 8080))
+
+uvicorn.run(
+    "main:app",
+    host="0.0.0.0",
+    port=port,
+)
