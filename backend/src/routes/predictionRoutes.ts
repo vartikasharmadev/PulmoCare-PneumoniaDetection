@@ -20,15 +20,6 @@ interface PythonPredictResponse {
   raw_value?: number;
 }
 
-function pythonServiceRoot(predictUrl: string): string {
-  try {
-    const u = new URL(predictUrl);
-    return `${u.origin}/`;
-  } catch {
-    return predictUrl.replace(/\/predict\/?$/i, '/') || predictUrl;
-  }
-}
-
 /** FastAPI uses `detail`; some routes use `message`. */
 function pythonApiErrorText(data: unknown): string {
   if (!data || typeof data !== 'object') {
@@ -164,29 +155,6 @@ router.post(
     }
   },
 );
-
-/** Quick check that Express can reach the FastAPI process (GET / on same host). */
-router.get('/model-status', async (_req, res): Promise<void> => {
-  const root = pythonServiceRoot(config.pythonPredictUrl);
-  try {
-    await axios.get(root, { timeout: 3000 });
-    res.json({
-      ok: true,
-      predictUrl: config.pythonPredictUrl,
-      checked: root,
-    });
-  } catch (err) {
-    const detail = axios.isAxiosError(err) ? err.message : String(err);
-    res.status(503).json({
-      ok: false,
-      predictUrl: config.pythonPredictUrl,
-      checked: root,
-      error: detail,
-      hint:
-        'cd backend && source ../fl_env/bin/activate && python main.py',
-    });
-  }
-});
 
 router.get(
   '/predictions/recent',
