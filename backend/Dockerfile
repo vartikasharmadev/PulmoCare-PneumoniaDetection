@@ -1,10 +1,16 @@
+
+
 FROM python:3.9-slim
 
 WORKDIR /app
 
+# 🔥 FORCE CACHE BREAK
+RUN echo "rebuild v2"
+
 # Install dependencies
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt && pip uninstall -y torch torchvision torchaudio || true
+RUN pip install --no-cache-dir --upgrade pip
+RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy app
 COPY . .
