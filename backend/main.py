@@ -9,6 +9,9 @@ warnings.filterwarnings(
     category=Warning,
 )
 
+# Reduce TensorFlow logs
+os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
+
 print("Starting Pneumonia Detection API...\n", file=sys.stderr, flush=True)
 
 import numpy as np
@@ -25,8 +28,11 @@ model = None
 def load_trained_model():
     global model
 
-    # ✅ Lazy import (VERY IMPORTANT)
-    from tensorflow.keras.models import load_model
+    try:
+        from tensorflow.keras.models import load_model
+    except Exception as e:
+        print("❌ TensorFlow import failed:", e)
+        return
 
     model_path = os.path.join(os.path.dirname(__file__), "global_federated_model.h5")
 
@@ -34,9 +40,12 @@ def load_trained_model():
         print(f"❌ Model file not found at {model_path}", flush=True)
         return
 
-    print("🔄 Loading model (this may take time)...", flush=True)
-    model = load_model(model_path)
-    print("✅ Model loaded successfully", flush=True)
+    try:
+        print("🔄 Loading model...", flush=True)
+        model = load_model(model_path)
+        print("✅ Model loaded successfully", flush=True)
+    except Exception as e:
+        print("❌ Model loading failed:", e)
 
 
 def get_model():
@@ -68,7 +77,6 @@ def read_root():
     return {"message": "Pneumonia Detection API is running"}
 
 
-# ✅ REQUIRED FOR RAILWAY
 @app.get("/health")
 def health():
     return {"status": "ok"}
@@ -76,16 +84,17 @@ def health():
 
 @app.post("/predict")
 async def predict(file: UploadFile = File(...)):
-    # ✅ Lazy import (VERY IMPORTANT)
-    from tensorflow.keras.preprocessing import image
-
-    model_instance = get_model()
-
-    if model_instance is None:
-        raise HTTPException(status_code=500, detail="Model not available")
-
     try:
+        # Lazy import
+        from tensorflow.keras.preprocessing import image
+
+        model_instance = get_model()
+
+        if model_instance is None:
+            raise Exception("Model not loaded")
+
         contents = await file.read()
+
         img = Image.open(io.BytesIO(contents)).convert("RGB")
         img = img.resize((150, 150))
 
@@ -108,9 +117,14 @@ async def predict(file: UploadFile = File(...)):
         }
 
     except Exception as e:
+        import traceback
+
+        print("\n❌ ERROR DURING PREDICTION:")
+        traceback.print_exc()
+
         raise HTTPException(
             status_code=500,
-            detail=f"Prediction failed: {str(e)}",
+            detail=str(e),
         )
 
 
