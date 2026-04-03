@@ -9,22 +9,7 @@ warnings.filterwarnings(
     category=Warning,
 )
 
-print(
-    "Starting Pneumonia Detection API...\n",
-    file=sys.stderr,
-    flush=True,
-)
-
-# TensorFlow imports
-try:
-    from tensorflow.keras.models import load_model
-    from tensorflow.keras.preprocessing import image
-except ImportError:
-    print(
-        f"TensorFlow missing or unsupported on Python {sys.version_info.major}.{sys.version_info.minor}",
-        file=sys.stderr,
-    )
-    raise SystemExit(1) from None
+print("Starting Pneumonia Detection API...\n", file=sys.stderr, flush=True)
 
 import numpy as np
 from fastapi import FastAPI, File, HTTPException, UploadFile
@@ -39,7 +24,12 @@ model = None
 
 def load_trained_model():
     global model
+
+    # ✅ Lazy import (VERY IMPORTANT)
+    from tensorflow.keras.models import load_model
+
     model_path = os.path.join(os.path.dirname(__file__), "global_federated_model.h5")
+
     if not os.path.exists(model_path):
         print(f"❌ Model file not found at {model_path}", flush=True)
         return
@@ -69,6 +59,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
 # -------------------------
 # ROUTES
 # -------------------------
@@ -77,7 +68,7 @@ def read_root():
     return {"message": "Pneumonia Detection API is running"}
 
 
-# 🔥 REQUIRED FOR RAILWAY
+# ✅ REQUIRED FOR RAILWAY
 @app.get("/health")
 def health():
     return {"status": "ok"}
@@ -85,6 +76,9 @@ def health():
 
 @app.post("/predict")
 async def predict(file: UploadFile = File(...)):
+    # ✅ Lazy import (VERY IMPORTANT)
+    from tensorflow.keras.preprocessing import image
+
     model_instance = get_model()
 
     if model_instance is None:
