@@ -1,4 +1,4 @@
-fgastapi
+fastapi
 uvicorn
 numpy
 pandas
