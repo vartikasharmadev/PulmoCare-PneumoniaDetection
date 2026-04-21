@@ -15,7 +15,7 @@ PulmoCare is an AI-powered pneumonia detection system that analyzes chest X-ray 
 # LIVE DEMO
 
 (Netlify)
-[https://strippy.netlify.app/](https://strippy.netlify.app/)
+
 ---
 
 # OVERVIEW
